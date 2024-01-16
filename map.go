@@ -1574,6 +1574,39 @@ func (mi *MapIterator) Next(keyOut, valueOut interface{}) bool {
 	return false
 }
 
+// Count iterates over the map and returns the amount of the keys
+// currently defined.
+//
+// It is slightly more optimized than iterating using Next() as we do
+// not lookup the value of the key, nor allocate memory for it.
+func (mi *MapIterator) Count() (uint32, error) {
+	if mi.err != nil {
+		return 0, mi.err
+	}
+
+	count := uint32(0)
+
+	for {
+		var nextKey []byte
+		if mi.cursor == nil {
+			nextKey, mi.err = mi.target.NextKeyBytes(nil)
+		} else {
+			nextKey, mi.err = mi.target.NextKeyBytes(mi.cursor)
+		}
+
+		if mi.err != nil {
+			mi.err = fmt.Errorf("look up next key: %w", mi.err)
+		}
+
+		if nextKey == nil {
+			return count, nil
+		}
+
+		mi.cursor = nextKey
+		count++
+	}
+}
+
 // Err returns any encountered error.
 //
 // The method must be called after Next returns nil.
